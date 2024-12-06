@@ -21,8 +21,8 @@ MODEL_PATH = {
    'human_to_statue': 'models/model_generator_BA_246.pth'
 }
 
-statue_to_human = Generator().half().to(device)
-human_to_statue = Generator().half().to(device)
+statue_to_human = Generator().to(device)
+human_to_statue = Generator().to(device)
 
 statue_to_human.load_state_dict(torch.load(MODEL_PATH['statue_to_human'], map_location=device))
 human_to_statue.load_state_dict(torch.load(MODEL_PATH['human_to_statue'], map_location=device))
@@ -46,7 +46,7 @@ def preprocess_image(img_array):
     img = img.unsqueeze(0)
     print(f"After unsqueeze shape: {img.shape}")
     
-    img = img.half().to(device)
+    img = img.to(device)
     
     img = img / 255.0
     img = (img - 0.5) / 0.5
