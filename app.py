@@ -8,18 +8,18 @@ from models.cyclegan import Generator
 app = Flask(__name__)
 
 MODEL_PATH = {
-    'photo_to_ukiyoe': 'models/photo_to_ukiyoe.pth',
-    'ukiyoe_to_photo': 'models/ukiyoe_to_photo.pth'
+    'statue_to_human': 'models/model_generator_AB_246.pth',
+    'human_to_statue': 'models/model_generator_BA_246.pth'
 }
 
-photo_to_ukiyoe = Generator()
-ukiyoe_to_photo = Generator()
+statue_to_human = Generator()
+human_to_statue = Generator()
 
-photo_to_ukiyoe.load_state_dict(torch.load(MODEL_PATH['photo_to_ukiyoe'], map_location=torch.device('cpu')))
-ukiyoe_to_photo.load_state_dict(torch.load(MODEL_PATH['ukiyoe_to_photo'], map_location=torch.device('cpu')))
+statue_to_human.load_state_dict(torch.load(MODEL_PATH['statue_to_human'], map_location=torch.device('cpu')))
+human_to_statue.load_state_dict(torch.load(MODEL_PATH['human_to_statue'], map_location=torch.device('cpu')))
 
-photo_to_ukiyoe.eval()
-ukiyoe_to_photo.eval()
+statue_to_human.eval()
+human_to_statue.eval()
 
 def preprocess_image(img):
     img = torch.from_numpy(img.transpose((2, 0, 1))).float()
@@ -38,7 +38,7 @@ def transform_image():
     if 'image' not in request.files:
         return 'No image file provided', 400
     
-    direction = request.form.get('direction', 'photo_to_ukiyoe')
+    direction = request.form.get('direction', 'statue_to_human')
     file = request.files['image']
     img = Image.open(file.stream)
     
@@ -49,10 +49,10 @@ def transform_image():
     img_tensor = preprocess_image(img_array)
     
     with torch.no_grad():
-        if direction == 'photo_to_ukiyoe':
-            transformed_tensor = photo_to_ukiyoe(img_tensor)
+        if direction == 'statue_to_human':
+            transformed_tensor = statue_to_human(img_tensor)
         else:
-            transformed_tensor = ukiyoe_to_photo(img_tensor)
+            transformed_tensor = human_to_statue(img_tensor)
     
     transformed_array = postprocess_image(transformed_tensor)
     transformed_img = Image.fromarray(transformed_array.astype('uint8'))
