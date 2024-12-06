@@ -9,6 +9,21 @@ import logging
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
+MODEL_PATH = {
+   'statue_to_human': 'models/model_generator_AB_246.pth',
+   'human_to_statue': 'models/model_generator_BA_246.pth'
+}
+
+statue_to_human = Generator()
+human_to_statue = Generator()
+
+statue_to_human.load_state_dict(torch.load(MODEL_PATH['statue_to_human'], map_location=torch.device('cpu')))
+human_to_statue.load_state_dict(torch.load(MODEL_PATH['human_to_statue'], map_location=torch.device('cpu')))
+
+statue_to_human.eval()
+human_to_statue.eval()
+
+
 @app.route('/transform', methods=['POST'])
 def transform_image():
     try:
