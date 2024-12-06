@@ -1,12 +1,19 @@
+import torch
+import os
 from flask import Flask, request, send_file, Response
+from flask_cors import CORS
 from PIL import Image
 import io
 import numpy as np
-import torch
 from cyclegan.cyclegan import Generator
 import logging
 
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
+
 app = Flask(__name__)
+CORS(app)
 logging.basicConfig(level=logging.INFO)
 
 MODEL_PATH = {
@@ -14,15 +21,53 @@ MODEL_PATH = {
    'human_to_statue': 'models/model_generator_BA_246.pth'
 }
 
-statue_to_human = Generator()
-human_to_statue = Generator()
+statue_to_human = Generator().half().to(device)
+human_to_statue = Generator().half().to(device)
 
-statue_to_human.load_state_dict(torch.load(MODEL_PATH['statue_to_human'], map_location=torch.device('cpu')))
-human_to_statue.load_state_dict(torch.load(MODEL_PATH['human_to_statue'], map_location=torch.device('cpu')))
+statue_to_human.load_state_dict(torch.load(MODEL_PATH['statue_to_human'], map_location=device))
+human_to_statue.load_state_dict(torch.load(MODEL_PATH['human_to_statue'], map_location=device))
 
 statue_to_human.eval()
 human_to_statue.eval()
 
+def preprocess_image(img_array):
+    target_size = (512, 512)
+    img = Image.fromarray(img_array)
+    img = img.resize(target_size, Image.Resampling.LANCZOS)
+    img_array = np.array(img)
+    
+    print(f"Preprocess input shape: {img_array.shape}")
+    print(f"Preprocess input type: {img_array.dtype}")
+    print(f"Preprocess input range: {img_array.min()} to {img_array.max()}")
+    
+    img = torch.from_numpy(img_array.transpose((2, 0, 1))).float()
+    print(f"After transpose shape: {img.shape}")
+    
+    img = img.unsqueeze(0)
+    print(f"After unsqueeze shape: {img.shape}")
+    
+    img = img.half().to(device)
+    
+    img = img / 255.0
+    img = (img - 0.5) / 0.5
+    print(f"After normalization range: {img.min().item()} to {img.max().item()}")
+    
+    return img
+
+def postprocess_image(tensor):
+    print(f"Postprocess input shape: {tensor.shape}")
+    print(f"Postprocess input range: {tensor.min().item()} to {tensor.max().item()}")
+    
+    img = (tensor + 1) / 2
+    img = img.squeeze().detach().cpu().numpy()
+    print(f"After denormalization shape: {img.shape}")
+    
+    img = img.transpose(1, 2, 0) * 255.0
+    img = np.clip(img, 0, 255)
+    print(f"Final shape: {img.shape}")
+    print(f"Final range: {img.min()} to {img.max()}")
+    
+    return img
 
 @app.route('/transform', methods=['POST'])
 def transform_image():
@@ -71,6 +116,7 @@ def transform_image():
                 print("15. Running model inference")
                 with torch.no_grad():
                     transformed_tensor = statue_to_human(img_tensor)
+                    transformed_tensor = transformed_tensor.float().cpu()
                 print(f"16. Transformed tensor shape: {transformed_tensor.shape}")
                 
                 print("17. Postprocessing image")
@@ -102,45 +148,6 @@ def transform_image():
         import traceback
         print(f"Traceback: {traceback.format_exc()}")
         return str(e), 500
-
-# 画像前処理関数の修正
-def preprocess_image(img_array):
-    # 入力値の確認
-    print(f"Preprocess input shape: {img_array.shape}")
-    print(f"Preprocess input type: {img_array.dtype}")
-    print(f"Preprocess input range: {img_array.min()} to {img_array.max()}")
-    
-    # numpy配列をテンソルに変換
-    img = torch.from_numpy(img_array.transpose((2, 0, 1))).float()
-    print(f"After transpose shape: {img.shape}")
-    
-    # バッチ次元の追加
-    img = img.unsqueeze(0)
-    print(f"After unsqueeze shape: {img.shape}")
-    
-    # 正規化
-    img = img / 255.0
-    img = (img - 0.5) / 0.5
-    print(f"After normalization range: {img.min().item()} to {img.max().item()}")
-    
-    return img
-
-# 後処理関数の修正
-def postprocess_image(tensor):
-    print(f"Postprocess input shape: {tensor.shape}")
-    print(f"Postprocess input range: {tensor.min().item()} to {tensor.max().item()}")
-    
-    # 正規化の逆変換
-    img = (tensor + 1) / 2
-    img = img.squeeze().detach().cpu().numpy()
-    print(f"After denormalization shape: {img.shape}")
-    
-    img = img.transpose(1, 2, 0) * 255.0
-    img = np.clip(img, 0, 255)
-    print(f"Final shape: {img.shape}")
-    print(f"Final range: {img.min()} to {img.max()}")
-    
-    return img
 
 @app.route('/health', methods=['GET'])
 def health_check():
