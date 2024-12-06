@@ -3,7 +3,7 @@ from PIL import Image
 import io
 import numpy as np
 import torch
-from models.cyclegan import Generator
+from cyclegan.cyclegan import Generator
 
 app = Flask(__name__)
 
