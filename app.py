@@ -55,21 +55,32 @@ def preprocess_image(img_array):
     return img
 
 def postprocess_image(tensor):
-    print(f"Postprocess input shape: {tensor.shape}")
-    print(f"Postprocess input range: {tensor.min().item()} to {tensor.max().item()}")
-
-    img = (tensor + 1) / 2
-    img = img.squeeze().detach().cpu().numpy()
-    print(f"After denormalization shape: {img.shape}")
-
-    # ここで画像を左に90度回転
-    img = np.rot90(img, 1, (0, 1))  # 1は回転回数、(0, 1)は回転させる軸
-
-    img = img.transpose(1, 2, 0) * 255.0
-    img = np.clip(img, 0, 255)
-    print(f"Final shape: {img.shape}")
-    print(f"Final range: {img.min()} to {img.max()}")
-
+    """
+    テンソルから画像への変換を修正
+    """
+    print(f"1. 入力テンソル形状: {tensor.shape}")
+    
+    # バッチ次元を削除
+    img = tensor.squeeze(0)
+    print(f"2. バッチ次元削除後: {img.shape}")
+    
+    # チャンネル次元を最後に移動
+    img = img.permute(1, 2, 0)
+    print(f"3. チャンネル次元移動後: {img.shape}")
+    
+    # [-1, 1] から [0, 255] の範囲に変換
+    img = ((img.cpu().detach().numpy() + 1.0) * 127.5).astype(np.uint8)
+    print(f"4. NumPy配列に変換後: {img.shape}")
+    
+    # 画像を回転（必要な場合）
+    img = np.rot90(img, k=1, axes=(0, 1))
+    print(f"5. 回転後: {img.shape}")
+    
+    # グレースケールの場合はRGBに変換
+    if img.shape[-1] == 1:
+        img = np.repeat(img, 3, axis=-1)
+    print(f"6. 最終形状: {img.shape}")
+    
     return img
 
 @app.route('/transform', methods=['POST'])
