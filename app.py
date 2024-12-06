@@ -57,16 +57,19 @@ def preprocess_image(img_array):
 def postprocess_image(tensor):
     print(f"Postprocess input shape: {tensor.shape}")
     print(f"Postprocess input range: {tensor.min().item()} to {tensor.max().item()}")
-    
+
     img = (tensor + 1) / 2
     img = img.squeeze().detach().cpu().numpy()
     print(f"After denormalization shape: {img.shape}")
-    
+
+    # ここで画像を左に90度回転
+    img = np.rot90(img, 1, (0, 1))  # 1は回転回数、(0, 1)は回転させる軸
+
     img = img.transpose(1, 2, 0) * 255.0
     img = np.clip(img, 0, 255)
     print(f"Final shape: {img.shape}")
     print(f"Final range: {img.min()} to {img.max()}")
-    
+
     return img
 
 @app.route('/transform', methods=['POST'])
