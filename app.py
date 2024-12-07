@@ -54,7 +54,7 @@ def preprocess_image(img_array):
     
     return img
 
-def postprocess_image(tensor):
+def postprocess_image(tensor, rotates=1):
     """
     テンソルから画像への変換を修正
     """
@@ -73,9 +73,8 @@ def postprocess_image(tensor):
     print(f"4. NumPy配列に変換後: {img.shape}")
     
     # 画像を回転（必要な場合）
-    img = np.rot90(img, k=1, axes=(0, 1))
-    img = np.rot90(img, k=1, axes=(0, 1))
-    img = np.rot90(img, k=1, axes=(0, 1))
+    for _ in range(rotates):
+        img = np.rot90(img, k=1, axes=(0, 1))
     print(f"5. 回転後: {img.shape}")
     
     # グレースケールの場合はRGBに変換
@@ -131,12 +130,19 @@ def transform_image():
                 
                 print("15. Running model inference")
                 with torch.no_grad():
-                    transformed_tensor = human_to_statue(img_tensor)
+                    if "statue_to_human" in str(raw_data):
+                        print("statue_to_human")
+                        transformed_tensor = statue_to_human(img_tensor)
+                        rotates = 0
+                    else:
+                        print("human_to_statue")
+                        transformed_tensor = human_to_statue(img_tensor)
+                        rotates = 3
                     transformed_tensor = transformed_tensor.float().cpu()
                 print(f"16. Transformed tensor shape: {transformed_tensor.shape}")
                 
                 print("17. Postprocessing image")
-                transformed_array = postprocess_image(transformed_tensor)
+                transformed_array = postprocess_image(transformed_tensor, rotates)
                 transformed_img = Image.fromarray(transformed_array.astype('uint8'))
                 
                 print("18. Preparing response")
