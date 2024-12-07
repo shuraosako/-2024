@@ -74,6 +74,8 @@ def postprocess_image(tensor):
     
     # 画像を回転（必要な場合）
     img = np.rot90(img, k=1, axes=(0, 1))
+    img = np.rot90(img, k=1, axes=(0, 1))
+    img = np.rot90(img, k=1, axes=(0, 1))
     print(f"5. 回転後: {img.shape}")
     
     # グレースケールの場合はRGBに変換
@@ -129,7 +131,7 @@ def transform_image():
                 
                 print("15. Running model inference")
                 with torch.no_grad():
-                    transformed_tensor = statue_to_human(img_tensor)
+                    transformed_tensor = human_to_statue(img_tensor)
                     transformed_tensor = transformed_tensor.float().cpu()
                 print(f"16. Transformed tensor shape: {transformed_tensor.shape}")
                 
